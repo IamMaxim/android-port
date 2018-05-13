@@ -36,6 +36,7 @@ public class GameActivity extends SDLActivity {
     private float startY;
     private boolean isMoving;
     private double mouseScalingFactor;
+    private boolean directMouseInput = true;
 
     public static native void getPathToJni(String path);
 
@@ -102,7 +103,7 @@ public class GameActivity extends SDLActivity {
         } catch (NumberFormatException e) {
             mouseScalingFactor = 1.8;
         }
-     }
+    }
 
     private void showControls() {
         hideControls = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(Constants.HIDE_CONTROLS, false);
@@ -143,10 +144,20 @@ public class GameActivity extends SDLActivity {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                if (numPointersDown == 0) {
-                    startX = event.getX();
-                    startY = event.getY();
+                if (directMouseInput) {
+                    int mouseX = SDLActivity.getMouseX();
+                    int mouseY = SDLActivity.getMouseY();
+                    int mouseButton = 0;
+//                    SDLActivity.onNativeMouse(0, MotionEvent.ACTION_MOVE, mouseX, mouseY);
+                    SDLActivity.onNativeMouse(mouseButton, MotionEvent.ACTION_DOWN, mouseX, mouseY);
+                } else {
+                    if (numPointersDown == 0) {
+                        startX = event.getX();
+                        startY = event.getY();
+                    }
                 }
+
+
                 ++numPointersDown;
                 maxPointersDown = Math.max(numPointersDown, maxPointersDown);
                 break;
@@ -167,9 +178,13 @@ public class GameActivity extends SDLActivity {
                             mouseButton = 2;
 
                         if (mouseButton != 0) {
-                            SDLActivity.onNativeMouse(mouseButton, MotionEvent.ACTION_DOWN, mouseX, mouseY);
-                            final Handler handler = new Handler();
-                            handler.postDelayed(() -> SDLActivity.onNativeMouse(0, MotionEvent.ACTION_UP, mouseX, mouseY), 100);
+                            if (directMouseInput) {
+                                SDLActivity.onNativeMouse(0, MotionEvent.ACTION_UP, mouseX, mouseY);
+                            } else {
+                                SDLActivity.onNativeMouse(mouseButton, MotionEvent.ACTION_DOWN, mouseX, mouseY);
+                                final Handler handler = new Handler();
+                                handler.postDelayed(() -> SDLActivity.onNativeMouse(0, MotionEvent.ACTION_UP, mouseX, mouseY), 100);
+                            }
                         }
                     }
 
@@ -191,8 +206,16 @@ public class GameActivity extends SDLActivity {
                         int mouseX = SDLActivity.getMouseX();
                         int mouseY = SDLActivity.getMouseY();
 
-                        long newMouseX = Math.round(mouseX + diffX * mouseScalingFactor);
-                        long newMouseY = Math.round(mouseY + diffY * mouseScalingFactor);
+                        long newMouseX;
+                        long newMouseY;
+
+                        if (directMouseInput) {
+                            newMouseX = (long) event.getX();
+                            newMouseY = (long) event.getY();
+                        } else {
+                            newMouseX = Math.round(mouseX + diffX * mouseScalingFactor);
+                            newMouseY = Math.round(mouseY + diffY * mouseScalingFactor);
+                        }
 
                         if (SDLActivity.isMouseShown() != 0)
                             SDLActivity.onNativeMouse(0, MotionEvent.ACTION_MOVE, newMouseX, newMouseY);

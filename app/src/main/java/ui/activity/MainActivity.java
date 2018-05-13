@@ -295,8 +295,9 @@ public class MainActivity extends AppCompatActivity {
                 });
             } catch (IOException e) {
                 Log.e(TAG, "Failed to write config files.", e);
-
-                Toast.makeText(activity, "Something failed", Toast.LENGTH_LONG).show();
+                runOnUiThread(() -> {
+                    Toast.makeText(activity, "Something failed", Toast.LENGTH_LONG).show();
+                });
             }
         });
         th.start();
